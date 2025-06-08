@@ -51,6 +51,7 @@
   <h1>Mago-BR 🔮</h1>
   <p>Ocultador de mensagens invisíveis com criptografia</p>
 
+  <!-- Seção de ocultação -->
   <textarea id="secret" rows="4" placeholder="Mensagem secreta..."></textarea>
   <textarea id="cloak" rows="3" placeholder="Mensagem pública (obrigatória)"></textarea>
   <input type="password" id="hidePassword" placeholder="Senha para proteger a mensagem">
@@ -58,6 +59,7 @@
   <textarea id="output" rows="4" readonly></textarea>
   <button onclick="copyOutput()">Copiar resultado</button>
 
+  <!-- Seção de revelação -->
   <h2>Revelar mensagem</h2>
   <textarea id="revealInput" rows="4" placeholder="Cole aqui a mensagem oculta"></textarea>
   <input type="password" id="revealPassword" placeholder="Senha para revelar">
@@ -74,7 +76,7 @@
   </footer>
 
   <script>
-    // Zero-width character set
+    // Conjunto de caracteres zero-width
     const zwc = {
       "0": "\u200b", // zero width space
       "1": "\u200c"  // zero width non-joiner
@@ -85,26 +87,31 @@
       "\u200c": "1"
     };
 
+    // Converte uma string em uma sequência binária (8 bits por caractere)
     function toBinary(str) {
       return str.split('').map(char =>
         char.charCodeAt(0).toString(2).padStart(8, '0')
       ).join('');
     }
 
+    // Converte uma sequência binária (8 bits por caractere) em uma string
     function fromBinary(binary) {
       return binary.match(/.{1,8}/g).map(byte =>
         String.fromCharCode(parseInt(byte, 2))
       ).join('');
     }
 
+    // Converte uma string binária em caracteres zero-width
     function binaryToZWC(bin) {
       return bin.split('').map(b => zwc[b]).join('');
     }
 
+    // Converte uma sequência de caracteres zero-width em uma string binária
     function zwcToBinary(zwcStr) {
       return zwcStr.split('').map(ch => zwcRev[ch] || '').join('');
     }
 
+    // Função XOR simples para criptografia simétrica
     function xorEncrypt(text, key) {
       let result = '';
       for (let i = 0; i < text.length; i++) {
@@ -113,24 +120,36 @@
       return result;
     }
 
+    // Função para ocultar a mensagem
     function hide() {
       const secret = document.getElementById('secret').value.trim();
       const cover = document.getElementById('cloak').value.trim();
       const password = document.getElementById('hidePassword').value.trim();
 
       if (!secret || !cover || !password) {
-        alert("Preencha todos os campos: secreta, pública e senha.");
+        alert("Preencha todos os campos: mensagem secreta, mensagem pública e senha.");
         return;
       }
 
+      // Criptografa a mensagem secreta usando XOR
       const encrypted = xorEncrypt(secret, password);
+      // Converte a mensagem criptografada para binário e depois em caracteres zero-width
       const binary = toBinary(encrypted);
       const hidden = binaryToZWC(binary);
-      const output = cover + hidden;
 
+      // Cria um objeto JSON contendo o bloco oculto
+      const stegoData = { hidden: hidden };
+      // Codifica o objeto JSON em base64
+      const encodedStegoData = btoa(JSON.stringify(stegoData));
+      
+      // Define uma assinatura delimitadora para identificar o bloco oculto
+      const signature = "🧙‍♂️🇧🇷";
+      // Junta a mensagem pública, a assinatura e o bloco de dados ocultos
+      const output = cover + signature + encodedStegoData;
       document.getElementById('output').value = output;
     }
 
+    // Função para revelar a mensagem oculta
     function reveal() {
       const input = document.getElementById('revealInput').value.trim();
       const password = document.getElementById('revealPassword').value.trim();
@@ -140,28 +159,40 @@
         return;
       }
 
-      const zwcChars = [...input].filter(c => c === '\u200b' || c === '\u200c').join('');
-      const binary = zwcToBinary(zwcChars);
-      if (!binary) {
-        document.getElementById('revealed').value = "Nenhuma mensagem oculta encontrada.";
+      const signature = "🧙‍♂️🇧🇷";
+      const signatureIndex = input.indexOf(signature);
+      if (signatureIndex === -1) {
+        alert("Assinatura Mago-BR não encontrada na mensagem.");
         return;
       }
 
+      // Extrai o bloco de dados ocultos após a assinatura
+      const encodedData = input.slice(signatureIndex + signature.length).trim();
+
       try {
-        const decrypted = xorEncrypt(fromBinary(binary), password);
+        // Decodifica o JSON a partir do bloco oculto
+        const stegoData = JSON.parse(atob(encodedData));
+        const hidden = stegoData.hidden;
+        // Converte os caracteres zero-width de volta para binário
+        const binary = zwcToBinary(hidden);
+        // Converte o binário para obter a mensagem criptografada
+        const encrypted = fromBinary(binary);
+        // Descriptografa a mensagem usando XOR (mesmo método da criptografia)
+        const decrypted = xorEncrypt(encrypted, password);
         document.getElementById('revealed').value = decrypted;
-      } catch {
-        document.getElementById('revealed').value = "Mensagem inválida ou senha incorreta.";
+      } catch (e) {
+        alert("Erro ao revelar a mensagem. Verifique se a mensagem pública está correta e se a senha confere.");
       }
     }
 
+    // Função para copiar o resultado (mantendo todos os caracteres invisíveis)
     function copyOutput() {
       const output = document.getElementById("output");
       output.select();
       document.execCommand("copy");
     }
 
-    // PWA
+    // Configuração do PWA
     let deferredPrompt;
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
