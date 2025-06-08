@@ -24,7 +24,7 @@
     textarea, input {
       width: 100%;
       padding: 1rem;
-      margin: 1rem 0;
+      margin: 0.5rem 0;
       background: #1a1a1a;
       color: #f8f8f8;
       border: none;
@@ -38,6 +38,7 @@
       border-radius: 10px;
       cursor: pointer;
       font-weight: bold;
+      margin: 0.5rem 0;
     }
     footer {
       margin-top: 3rem;
@@ -50,22 +51,25 @@
   <h1>Mago-BR 🔮</h1>
   <p>Ocultador de mensagens invisíveis com criptografia</p>
 
-  <textarea id="secret" rows="5" placeholder="Mensagem secreta..."></textarea>
+  <textarea id="secret" rows="4" placeholder="Mensagem secreta..."></textarea>
   <input type="text" id="cloak" placeholder="Mensagem pública (opcional)">
+  <input type="password" id="hidePassword" placeholder="Senha para proteger a mensagem">
   <button onclick="hide()">Ocultar mensagem</button>
-  <textarea id="output" rows="5" readonly></textarea>
+  <textarea id="output" rows="4" readonly></textarea>
   <button onclick="copyOutput()">Copiar resultado</button>
 
   <h2>Revelar mensagem</h2>
-  <textarea id="revealInput" rows="5" placeholder="Cole aqui a mensagem oculta"></textarea>
+  <textarea id="revealInput" rows="4" placeholder="Cole aqui a mensagem oculta"></textarea>
+  <input type="password" id="revealPassword" placeholder="Senha para revelar">
   <button onclick="reveal()">Revelar</button>
-  <textarea id="revealed" rows="5" readonly></textarea>
+  <textarea id="revealed" rows="4" readonly></textarea>
 
   <div id="installPrompt" style="margin-top: 2rem;"></div>
 
   <footer>
     <p>
-      Copyright © 2025 <a href="https://x.com/marcoalvim999" target="_blank" style="color: #72f7ff;">Marco Alvim</a>
+      Copyright © 2025 
+      <a href="https://x.com/marcoalvim999" target="_blank" style="color: #72f7ff;">Marco Alvim</a>
     </p>
   </footer>
 
@@ -76,14 +80,28 @@
     function hide() {
       const secret = document.getElementById('secret').value;
       const cover = document.getElementById('cloak').value || '';
-      const encoded = stegcloak.hide(secret, 'senha', cover);
+      const password = document.getElementById('hidePassword').value.trim();
+
+      if (!secret || !password) {
+        alert("Preencha a mensagem secreta e a senha.");
+        return;
+      }
+
+      const encoded = stegcloak.hide(secret, password, cover);
       document.getElementById('output').value = encoded;
     }
 
     function reveal() {
       const hidden = document.getElementById('revealInput').value;
+      const password = document.getElementById('revealPassword').value.trim();
+
+      if (!hidden || !password) {
+        alert("Cole a mensagem oculta e digite a senha.");
+        return;
+      }
+
       try {
-        const revealed = stegcloak.reveal(hidden, 'senha');
+        const revealed = stegcloak.reveal(hidden, password);
         document.getElementById('revealed').value = revealed;
       } catch (e) {
         document.getElementById('revealed').value = 'Mensagem inválida ou senha incorreta.';
@@ -96,7 +114,7 @@
       document.execCommand("copy");
     }
 
-    // PWA installation prompt
+    // Instalação do PWA
     let deferredPrompt;
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -112,7 +130,6 @@
       document.getElementById("installPrompt").appendChild(installBtn);
     });
 
-    // Registrar Service Worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register("service-worker.js");
     }
