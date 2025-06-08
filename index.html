@@ -73,41 +73,45 @@
     </p>
   </footer>
 
-  <!-- Stegcloak embutido -->
   <script>
-    class StegCloak {
-      constructor(whitespace=true, utf16=false) {
-        this.whitespace = whitespace;
-        this.utf16 = utf16;
-        this.charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;'\"!?$%&()[]{}<>@#^*-_=+\\|/~`\n\r\t";
-      }
+    // Zero-width character set
+    const zwc = {
+      "0": "\u200b", // zero width space
+      "1": "\u200c"  // zero width non-joiner
+    };
 
-      encodeMessage(message, password) {
-        let encrypted = "";
-        for (let i = 0; i < message.length; i++) {
-          let charCode = message.charCodeAt(i) ^ password.charCodeAt(i % password.length);
-          encrypted += String.fromCharCode(charCode);
-        }
-        return encrypted;
-      }
+    const zwcRev = {
+      "\u200b": "0",
+      "\u200c": "1"
+    };
 
-      decodeMessage(encrypted, password) {
-        return this.encodeMessage(encrypted, password);
-      }
-
-      hide(secret, password, cover) {
-        const encrypted = this.encodeMessage(secret, password);
-        const hidden = Array.from(encrypted).map(c => '\u200b' + c).join('');
-        return cover + hidden;
-      }
-
-      reveal(hiddenText, password) {
-        const zeroWidth = Array.from(hiddenText).filter((c, i) => hiddenText.charCodeAt(i - 1) === 8203).join('');
-        return this.decodeMessage(zeroWidth, password);
-      }
+    function toBinary(str) {
+      return str.split('').map(char =>
+        char.charCodeAt(0).toString(2).padStart(8, '0')
+      ).join('');
     }
 
-    const stegcloak = new StegCloak();
+    function fromBinary(binary) {
+      return binary.match(/.{1,8}/g).map(byte =>
+        String.fromCharCode(parseInt(byte, 2))
+      ).join('');
+    }
+
+    function binaryToZWC(bin) {
+      return bin.split('').map(b => zwc[b]).join('');
+    }
+
+    function zwcToBinary(zwcStr) {
+      return zwcStr.split('').map(ch => zwcRev[ch] || '').join('');
+    }
+
+    function xorEncrypt(text, key) {
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+      }
+      return result;
+    }
 
     function hide() {
       const secret = document.getElementById('secret').value.trim();
@@ -119,22 +123,33 @@
         return;
       }
 
-      const encoded = stegcloak.hide(secret, password, cover);
-      document.getElementById('output').value = encoded;
+      const encrypted = xorEncrypt(secret, password);
+      const binary = toBinary(encrypted);
+      const hidden = binaryToZWC(binary);
+      const output = cover + hidden;
+
+      document.getElementById('output').value = output;
     }
 
     function reveal() {
-      const hidden = document.getElementById('revealInput').value.trim();
+      const input = document.getElementById('revealInput').value.trim();
       const password = document.getElementById('revealPassword').value.trim();
 
-      if (!hidden || !password) {
+      if (!input || !password) {
         alert("Cole a mensagem oculta e digite a senha.");
         return;
       }
 
+      const zwcChars = [...input].filter(c => c === '\u200b' || c === '\u200c').join('');
+      const binary = zwcToBinary(zwcChars);
+      if (!binary) {
+        document.getElementById('revealed').value = "Nenhuma mensagem oculta encontrada.";
+        return;
+      }
+
       try {
-        const revealed = stegcloak.reveal(hidden, password);
-        document.getElementById('revealed').value = revealed;
+        const decrypted = xorEncrypt(fromBinary(binary), password);
+        document.getElementById('revealed').value = decrypted;
       } catch {
         document.getElementById('revealed').value = "Mensagem inválida ou senha incorreta.";
       }
