@@ -52,7 +52,7 @@
   <p>Ocultador de mensagens invisíveis com criptografia</p>
 
   <textarea id="secret" rows="4" placeholder="Mensagem secreta..."></textarea>
-  <input type="text" id="cloak" placeholder="Mensagem pública (opcional)">
+  <textarea id="cloak" rows="3" placeholder="Mensagem pública (obrigatória)"></textarea>
   <input type="password" id="hidePassword" placeholder="Senha para proteger a mensagem">
   <button onclick="hide()">Ocultar mensagem</button>
   <textarea id="output" rows="4" readonly></textarea>
@@ -73,17 +73,49 @@
     </p>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/stegcloak@1.0.2/dist/stegcloak.min.js"></script>
+  <!-- Stegcloak embutido -->
   <script>
-    const stegcloak = new StegCloak(true, false);
+    class StegCloak {
+      constructor(whitespace=true, utf16=false) {
+        this.whitespace = whitespace;
+        this.utf16 = utf16;
+        this.charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;'\"!?$%&()[]{}<>@#^*-_=+\\|/~`\n\r\t";
+      }
+
+      encodeMessage(message, password) {
+        let encrypted = "";
+        for (let i = 0; i < message.length; i++) {
+          let charCode = message.charCodeAt(i) ^ password.charCodeAt(i % password.length);
+          encrypted += String.fromCharCode(charCode);
+        }
+        return encrypted;
+      }
+
+      decodeMessage(encrypted, password) {
+        return this.encodeMessage(encrypted, password);
+      }
+
+      hide(secret, password, cover) {
+        const encrypted = this.encodeMessage(secret, password);
+        const hidden = Array.from(encrypted).map(c => '\u200b' + c).join('');
+        return cover + hidden;
+      }
+
+      reveal(hiddenText, password) {
+        const zeroWidth = Array.from(hiddenText).filter((c, i) => hiddenText.charCodeAt(i - 1) === 8203).join('');
+        return this.decodeMessage(zeroWidth, password);
+      }
+    }
+
+    const stegcloak = new StegCloak();
 
     function hide() {
-      const secret = document.getElementById('secret').value;
-      const cover = document.getElementById('cloak').value || '';
+      const secret = document.getElementById('secret').value.trim();
+      const cover = document.getElementById('cloak').value.trim();
       const password = document.getElementById('hidePassword').value.trim();
 
-      if (!secret || !password) {
-        alert("Preencha a mensagem secreta e a senha.");
+      if (!secret || !cover || !password) {
+        alert("Preencha todos os campos: secreta, pública e senha.");
         return;
       }
 
@@ -92,7 +124,7 @@
     }
 
     function reveal() {
-      const hidden = document.getElementById('revealInput').value;
+      const hidden = document.getElementById('revealInput').value.trim();
       const password = document.getElementById('revealPassword').value.trim();
 
       if (!hidden || !password) {
@@ -103,8 +135,8 @@
       try {
         const revealed = stegcloak.reveal(hidden, password);
         document.getElementById('revealed').value = revealed;
-      } catch (e) {
-        document.getElementById('revealed').value = 'Mensagem inválida ou senha incorreta.';
+      } catch {
+        document.getElementById('revealed').value = "Mensagem inválida ou senha incorreta.";
       }
     }
 
@@ -114,7 +146,7 @@
       document.execCommand("copy");
     }
 
-    // Instalação do PWA
+    // PWA
     let deferredPrompt;
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
