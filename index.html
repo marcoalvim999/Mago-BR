@@ -126,36 +126,35 @@
       const binary = toBinary(encrypted);
       const hidden = binaryToZWC(binary);
 
-      const markerStart = "\u2063"; // INVISIBLE SEPARATOR
-      const markerEnd = "\u2063";
+      const marker = "\u2063";
+      const output = cover + marker + hidden + marker;
 
-      const output = cover + markerStart + hidden + markerEnd;
       document.getElementById('output').value = output;
     }
 
     function reveal() {
       const input = document.getElementById('revealInput').value;
       const password = document.getElementById('revealPassword').value.trim();
+      const marker = "\u2063";
 
       if (!input || !password) {
         alert("Cole a mensagem oculta e digite a senha.");
         return;
       }
 
-      const markerStart = "\u2063";
-      const markerEnd = "\u2063";
+      const startIndex = input.indexOf(marker);
+      const endIndex = input.lastIndexOf(marker);
 
-      const parts = input.split(markerStart);
-      if (parts.length < 2) {
-        document.getElementById('revealed').value = "Mensagem não encontrada.";
+      if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+        document.getElementById('revealed').value = "⚠️ A mensagem não contém dados invisíveis.\nVerifique se foi copiada corretamente.";
         return;
       }
 
-      const zwcSection = parts[1].split(markerEnd)[0];
+      const zwcSection = input.substring(startIndex + 1, endIndex);
       const binary = zwcToBinary(zwcSection);
 
-      if (!binary) {
-        document.getElementById('revealed').value = "Nenhuma mensagem oculta encontrada.";
+      if (!binary || binary.length % 8 !== 0) {
+        document.getElementById('revealed').value = "⚠️ Mensagem corrompida ou inválida.";
         return;
       }
 
@@ -171,6 +170,7 @@
       const output = document.getElementById("output");
       output.select();
       document.execCommand("copy");
+      alert("✅ Mensagem copiada!\n⚠️ Cole apenas em locais que preservem caracteres invisíveis, como blocos de notas, chats ou emails.");
     }
 
     // PWA
