@@ -1,15 +1,20 @@
 {
   "name": "Mago-BR",
-  "short_name": "MagoBR",
-  "start_url": ".",
+  "short_name": "Mago",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f0f0f",
-  "theme_color": "#72f7ff",
-  "description": "Esteganografia com criptografia invisível - Mago-BR",
+  "theme_color": "#0f0f0f",
+  "description": "Ocultador de mensagens invisíveis com criptografia",
   "icons": [
     {
       "src": "favicon.png",
-      "sizes": "64x64",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
