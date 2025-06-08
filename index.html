@@ -52,7 +52,7 @@
   <p>Ocultador de mensagens invisíveis com criptografia</p>
 
   <textarea id="secret" rows="4" placeholder="Mensagem secreta..."></textarea>
-  <textarea id="cloak" rows="4" placeholder="Mensagem pública (obrigatória)"></textarea>
+  <textarea id="cloak" rows="3" placeholder="Mensagem pública (obrigatória)"></textarea>
   <input type="password" id="hidePassword" placeholder="Senha para proteger a mensagem">
   <button onclick="hide()">Ocultar mensagem</button>
   <textarea id="output" rows="4" readonly></textarea>
@@ -78,6 +78,7 @@
       "0": "\u200b", // zero width space
       "1": "\u200c"  // zero width non-joiner
     };
+
     const zwcRev = {
       "\u200b": "0",
       "\u200c": "1"
@@ -125,8 +126,11 @@
       const binary = toBinary(encrypted);
       const hidden = binaryToZWC(binary);
 
-      const outputText = cover + hidden;
-      document.getElementById('output').value = outputText;
+      const markerStart = "\u2063"; // INVISIBLE SEPARATOR
+      const markerEnd = "\u2063";
+
+      const output = cover + markerStart + hidden + markerEnd;
+      document.getElementById('output').value = output;
     }
 
     function reveal() {
@@ -138,8 +142,17 @@
         return;
       }
 
-      const zwcChars = [...input].filter(c => c === '\u200b' || c === '\u200c').join('');
-      const binary = zwcToBinary(zwcChars);
+      const markerStart = "\u2063";
+      const markerEnd = "\u2063";
+
+      const parts = input.split(markerStart);
+      if (parts.length < 2) {
+        document.getElementById('revealed').value = "Mensagem não encontrada.";
+        return;
+      }
+
+      const zwcSection = parts[1].split(markerEnd)[0];
+      const binary = zwcToBinary(zwcSection);
 
       if (!binary) {
         document.getElementById('revealed').value = "Nenhuma mensagem oculta encontrada.";
@@ -157,7 +170,7 @@
     function copyOutput() {
       const output = document.getElementById("output");
       output.select();
-      navigator.clipboard.writeText(output.value);
+      document.execCommand("copy");
     }
 
     // PWA
